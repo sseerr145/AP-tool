@@ -43,7 +43,7 @@ function App() {
           console.log('OCR Progress:', m);
           if (m.status === 'recognizing text') {
             setOcrProgress(Math.round(m.progress * 100));
-            setProcessingStep(`Processing OCR... ${Math.round(m.progress * 100)}%`);
+            setProcessingStep('Processing OCR... ' + Math.round(m.progress * 100) + '%');
           }
         },
       });
@@ -56,10 +56,10 @@ function App() {
 
       setFields(extractedFields);
       setProcessingStep('');
-      console.log(`Extracted ${extractedFields.length} fields from PDF`);
+      console.log('Extracted ' + extractedFields.length + ' fields from PDF');
     } catch (error) {
       console.error("OCR processing failed:", error);
-      setProcessingStep(`OCR processing failed: ${error.message}`);
+      setProcessingStep('OCR processing failed: ' + error.message);
       setTimeout(() => setProcessingStep(''), 5000);
     } finally {
       setIsProcessing(false);
@@ -104,7 +104,7 @@ function App() {
       return canvas;
     } catch (error) {
       console.error("PDF to image conversion failed:", error);
-      throw new Error(`PDF conversion failed: ${error.message}`);
+      throw new Error('PDF conversion failed: ' + error.message);
     }
   };
 
@@ -252,7 +252,7 @@ function App() {
     const textFields = fields.filter(f => f.type === 'text');
 
     [...structuredFields, ...textFields].forEach(field => {
-      const key = `${field.value.toLowerCase()}-${field.type}`;
+      const key = field.value.toLowerCase() + '-' + field.type;
       if (!seen.has(key)) {
         seen.add(key);
         uniqueFields.push(field);
@@ -283,13 +283,28 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b p-4">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Modern Header */}
+      <header className="bg-white/80 backdrop-blur-md shadow-lg border-b border-blue-100 p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Invoice Extraction Tool</h1>
           <div className="flex items-center gap-4">
-            <label className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg cursor-pointer transition-colors font-medium">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                AI Invoice Extractor
+              </h1>
+              <p className="text-sm text-gray-600">Advanced OCR & Smart Field Recognition</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl cursor-pointer transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-3">
+              <svg className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
               Upload PDF Invoice
               <input 
                 type="file" 
@@ -299,15 +314,18 @@ function App() {
               />
             </label>
             {isProcessing && (
-              <div className="flex items-center gap-3 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <div className="flex items-center gap-4 text-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-3 rounded-xl border border-blue-200 shadow-lg">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-200"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-blue-600 absolute top-0 left-0"></div>
+                </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">{processingStep}</span>
+                  <span className="text-sm font-semibold">{processingStep}</span>
                   {ocrProgress > 0 && (
-                    <div className="w-32 bg-blue-200 rounded-full h-1.5 mt-1">
+                    <div className="w-40 bg-blue-200 rounded-full h-2 mt-2 overflow-hidden">
                       <div 
-                        className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-                        style={{ width: `${ocrProgress}%` }}
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: ocrProgress + '%' }}
                       ></div>
                     </div>
                   )}
@@ -318,10 +336,10 @@ function App() {
         </div>
       </header>
 
-      {/* Main Content - FLIPPED LAYOUT: Fields left, PDF right */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Enhanced Main Content */}
+      <div className="flex flex-1 overflow-hidden gap-4 p-4">
         {/* Extracted Fields Panel - Left 1/3 */}
-        <div className="w-1/3 bg-white border-r overflow-auto">
+        <div className="w-1/3 bg-white/90 backdrop-blur-sm border border-blue-100 rounded-2xl shadow-xl overflow-auto">
           {fields.length > 0 ? (
             <ExtractedFieldsPanel
               fields={fields}
@@ -329,14 +347,28 @@ function App() {
               onFieldUpdate={handleFieldUpdate}
             />
           ) : (
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-3 text-gray-900">Extracted Fields</h2>
-              <div className="text-center py-12">
-                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="text-gray-500 text-sm">
-                  {isProcessing ? "Processing document..." : "Upload a PDF invoice to extract fields"}
+            <div className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-gray-800">Smart Field Detection</h2>
+              </div>
+              <div className="text-center py-16">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <svg className="h-10 w-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                  {isProcessing ? "🔍 AI Processing Document..." : "Ready for Analysis"}
+                </h3>
+                <p className="text-gray-500 text-sm leading-relaxed max-w-xs mx-auto">
+                  {isProcessing 
+                    ? "Advanced OCR technology is extracting and categorizing invoice data" 
+                    : "Upload a PDF invoice and watch AI automatically detect invoice numbers, dates, totals, and more"}
                 </p>
               </div>
             </div>
@@ -344,21 +376,46 @@ function App() {
         </div>
 
         {/* PDF Viewer - Right 2/3 */}
-        <div className="w-2/3 overflow-auto p-6 bg-gray-50">
+        <div className="w-2/3 overflow-auto bg-white/70 backdrop-blur-sm border border-blue-100 rounded-2xl shadow-xl p-6">
           {pdfUrl ? (
             <div className="flex justify-center">
-              <div className="bg-white rounded-lg shadow-lg p-4">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 border border-blue-100">
                 <PdfViewer pdfUrl={pdfUrl} highlights={highlight} />
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No PDF loaded</h3>
-                <p className="text-gray-500">Upload a PDF invoice to get started with field extraction</p>
+              <div className="text-center max-w-md">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-lg">
+                  <svg className="h-12 w-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">Ready for Document Analysis</h3>
+                <p className="text-gray-600 leading-relaxed mb-8">
+                  Drop your PDF invoice above and witness AI-powered extraction in action. 
+                  Our advanced OCR technology will automatically identify and categorize key invoice data.
+                </p>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div className="font-semibold text-blue-800">Fast OCR</div>
+                    <div className="text-blue-600">Seconds to extract</div>
+                  </div>
+                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                    <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <div className="font-semibold text-indigo-800">Smart Fields</div>
+                    <div className="text-indigo-600">Auto-categorized</div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

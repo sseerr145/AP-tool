@@ -46,25 +46,32 @@ export default function ExtractedFieldsPanel({ fields, onFieldClick, onFieldUpda
   const textFields = fields.filter(f => f.type === 'text');
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Extracted Fields</h2>
-        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800">Extracted Data</h2>
+        </div>
+        <span className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-200">
           {fields.length} fields
         </span>
       </div>
 
-      {/* Summary Stats */}
+      {/* Enhanced Summary Stats */}
       {fields.length > 0 && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <div className="text-gray-600">Total Fields</div>
-              <div className="font-semibold text-lg text-gray-900">{fields.length}</div>
+        <div className="mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 shadow-sm">
+          <div className="grid grid-cols-2 gap-6 text-sm">
+            <div className="text-center">
+              <div className="text-blue-600 font-medium mb-1">Total Fields</div>
+              <div className="font-bold text-2xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{fields.length}</div>
             </div>
-            <div>
-              <div className="text-gray-600">Avg. Confidence</div>
-              <div className="font-semibold text-lg text-gray-900">
+            <div className="text-center">
+              <div className="text-blue-600 font-medium mb-1">Avg. Confidence</div>
+              <div className="font-bold text-2xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 {Math.round(fields.reduce((acc, f) => acc + f.confidence, 0) / fields.length)}%
               </div>
             </div>
@@ -74,19 +81,22 @@ export default function ExtractedFieldsPanel({ fields, onFieldClick, onFieldUpda
 
       {/* Structured Fields */}
       {structuredFields.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-3 uppercase tracking-wide">
-            Invoice Data
-          </h3>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></div>
+            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+              🎯 Smart Invoice Data
+            </h3>
+          </div>
           <div className="space-y-3">
             {structuredFields.map((field, idx) => {
               const globalIdx = fields.indexOf(field);
               return (
                 <div
                   key={globalIdx}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  className={`p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
                     fieldTypeColors[field.type] || fieldTypeColors.text
-                  } ${selectedIndex === globalIdx ? 'ring-2 ring-blue-500 border-blue-300' : ''}`}
+                  } ${selectedIndex === globalIdx ? 'ring-2 ring-blue-500 border-blue-300 shadow-lg scale-105' : ''}`}
                   onClick={() => handleClick(field, globalIdx)}
                 >
                   <div className="flex items-center justify-between mb-3">
@@ -96,13 +106,13 @@ export default function ExtractedFieldsPanel({ fields, onFieldClick, onFieldUpda
                         {field.label}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
-                      {field.confidence}%
+                    <span className="text-xs font-semibold text-blue-700 bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1.5 rounded-full border border-blue-200">
+                      {field.confidence}% confidence
                     </span>
                   </div>
                   <div className="space-y-2">
                     <input
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-300 transition-all duration-300 font-medium"
                       value={field.value || field.name}
                       onChange={(e) => onFieldUpdate(globalIdx, { ...field, value: e.target.value })}
                       onClick={(e) => e.stopPropagation()}
@@ -123,10 +133,13 @@ export default function ExtractedFieldsPanel({ fields, onFieldClick, onFieldUpda
 
       {/* Text Fields */}
       {textFields.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-3 uppercase tracking-wide">
-            Additional Text ({textFields.length})
-          </h3>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-6 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full"></div>
+            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+              📄 Additional Text ({textFields.length})
+            </h3>
+          </div>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {textFields.slice(0, 10).map((field, idx) => {
               const globalIdx = fields.indexOf(field);
@@ -154,10 +167,10 @@ export default function ExtractedFieldsPanel({ fields, onFieldClick, onFieldUpda
         </div>
       )}
 
-      {/* Export Button */}
+      {/* Enhanced Export Button */}
       {fields.length > 0 && (
         <button
-          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 px-6 rounded-2xl transition-all duration-300 font-bold flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:scale-105 transform"
           onClick={() => {
             const exportData = {
               invoice: {},

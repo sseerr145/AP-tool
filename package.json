@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron": "cross-env NODE_ENV=production electron .",
-    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5175 && npm run electron\"",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5175 && cross-env NODE_ENV=development electron .\"",
     "electron-pack": "npm run build && electron-builder",
     "postinstall": "node -e \"require('fs').cpSync('node_modules/pdfjs-dist/build/pdf.worker.mjs', 'public/pdf.worker.js', {force: true})\""
   },
