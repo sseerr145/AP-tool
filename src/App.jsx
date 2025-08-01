@@ -4,8 +4,10 @@ import PdfViewer from "./components/PdfViewer";
 import ExtractedFieldsPanel from "./components/ExtractedFieldsPanel";
 import Tesseract from "tesseract.js";
 import * as pdfjs from "pdfjs-dist";
+import { configurePdfJs, PDF_LOAD_OPTIONS } from "./utils/pdfConfig";
 
-// PDF.js worker is configured in PdfViewer.jsx to avoid conflicts
+// Ensure PDF.js is configured for Electron
+configurePdfJs();
 
 function App() {
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -153,8 +155,7 @@ function App() {
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjs.getDocument({ 
         data: arrayBuffer,
-        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
-        cMapPacked: true,
+        ...PDF_LOAD_OPTIONS,
       });
 
       const pdf = await loadingTask.promise;

@@ -11,7 +11,7 @@
     "electron": "cross-env NODE_ENV=production electron .",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5200 && cross-env NODE_ENV=development electron .\"",
     "electron-pack": "npm run build && electron-builder",
-    "postinstall": "node -e \"require('fs').cpSync('node_modules/pdfjs-dist/build/pdf.worker.mjs', 'public/pdf.worker.js', {force: true})\""
+    "postinstall": "echo 'PDF.js configured for single-threaded mode (no worker copying needed)'"
   },
   "dependencies": {
     "lucide-react": "^0.536.0",

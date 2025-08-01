@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as pdfjs from "pdfjs-dist";
+import { configurePdfJs, PDF_LOAD_OPTIONS } from "../utils/pdfConfig";
 
-// Configure PDF.js worker - SINGLE source of truth
-if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
-}
+// Ensure PDF.js is configured for Electron
+configurePdfJs();
 
 export default function PdfViewer({ pdfUrl, highlights }) {
   const canvasRef = useRef(null);
@@ -47,8 +46,7 @@ export default function PdfViewer({ pdfUrl, highlights }) {
 
         loadingTaskRef.current = pdfjs.getDocument({
           url: pdfUrl,
-          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
-          cMapPacked: true,
+          ...PDF_LOAD_OPTIONS,
         });
 
         const pdfDoc = await loadingTaskRef.current.promise;
@@ -90,7 +88,7 @@ export default function PdfViewer({ pdfUrl, highlights }) {
         setLoading(false);
       } catch (error) {
         console.error("Error loading PDF:", error);
-        setError(error.message);
+        setError(`Failed to load PDF: ${error.message}`);
         setLoading(false);
       }
     };

@@ -15,7 +15,13 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: false, // Only for development
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // Enhanced worker support for PDF.js
+      webWorkers: true,
+      allowRunningInsecureContent: process.env.NODE_ENV === 'development',
+      experimentalFeatures: true,
+      // Enable SharedArrayBuffer for better PDF.js performance
+      enableSharedArrayBuffer: true,
     },
   });
   

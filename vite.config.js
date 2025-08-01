@@ -1,18 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { copyFileSync } from 'fs'
-import { resolve } from 'path'
 
-// Copy PDF.js worker to public directory
-try {
-  copyFileSync(
-    resolve(__dirname, 'node_modules/pdfjs-dist/build/pdf.worker.mjs'),
-    resolve(__dirname, 'public/pdf.worker.js')
-  )
-  console.log('PDF.js worker copied successfully')
-} catch (err) {
-  console.error('Failed to copy PDF.js worker:', err)
-}
+// No longer copying PDF.js worker - we're using single-threaded mode
 
 export default defineConfig({
   plugins: [react()],
@@ -23,9 +12,20 @@ export default defineConfig({
     host: 'localhost'
   },
   optimizeDeps: {
-    include: ['pdfjs-dist']
+    include: ['pdfjs-dist'],
+    // Exclude worker from optimization
+    exclude: ['pdfjs-dist/build/pdf.worker.js', 'pdfjs-dist/build/pdf.worker.mjs']
   },
   define: {
     global: 'globalThis',
+    // Signal that workers are disabled
+    'process.env.PDF_WORKER_DISABLED': true
+  },
+  // Stub out any worker imports
+  resolve: {
+    alias: {
+      'pdfjs-dist/build/pdf.worker.js': '/dev/null',
+      'pdfjs-dist/build/pdf.worker.mjs': '/dev/null'
+    }
   }
 })
