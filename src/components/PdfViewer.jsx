@@ -1,43 +1,45 @@
 import { useEffect, useRef, useState } from "react";
 import * as pdfjs from "pdfjs-dist";
 
-// Configure PDF.js worker
-if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
-}
+// Configure PDF.js worker - use proper path
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url
+).href;
 
 export default function PdfViewer({ pdfUrl, highlights }) {
   const canvasRef = useRef(null);
+  const overlayRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pdf, setPdf] = useState(null);
-
+  const [pageScale, setPageScale] = useState(1.5);
   const renderTaskRef = useRef(null);
   const loadingTaskRef = useRef(null);
 
-  // Clean up function
-  const cleanup = () => {
-    if (renderTaskRef.current) {
-      try { 
-        renderTaskRef.current.cancel(); 
-      } catch {}
-      renderTaskRef.current = null;
-    }
-    if (loadingTaskRef.current) {
-      try { 
-        loadingTaskRef.current.destroy(); 
-      } catch {}
-      loadingTaskRef.current = null;
-    }
-  };
-
-  // render pdf when url changes
   useEffect(() => {
     const loadPdf = async () => {
       if (!pdfUrl || !canvasRef.current) return;
 
-      // Clean up any previous operations
-      cleanup();
+      // Cancel any ongoing render task
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (e) {
+          console.log("Render task already completed");
+        }
+        renderTaskRef.current = null;
+      }
+
+      // Destroy any previous loading task
+      if (loadingTaskRef.current) {
+        try {
+          loadingTaskRef.current.destroy();
+        } catch (e) {
+          console.log("Loading task already destroyed");
+        }
+        loadingTaskRef.current = null;
+      }
+
       setLoading(true);
       setError(null);
 
@@ -46,61 +48,93 @@ export default function PdfViewer({ pdfUrl, highlights }) {
         loadingTaskRef.current = pdfjs.getDocument(pdfUrl);
         const pdfDoc = await loadingTaskRef.current.promise;
         console.log("PDF loaded successfully");
-        
-        setPdf(pdfDoc);
 
         const page = await pdfDoc.getPage(1);
-        const scale = 1.5;
-        const viewport = page.getViewport({ scale });
+        const viewport = page.getViewport({ scale: pageScale });
 
         const canvas = canvasRef.current;
-        if (!canvas) return; // Double check canvas still exists
+        if (!canvas) return; // Component might have unmounted
         
         const context = canvas.getContext("2d");
-        // Clear canvas first
+        
+        // Clear canvas before rendering
         context.clearRect(0, 0, canvas.width, canvas.height);
         
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
-        renderTaskRef.current = page.render({ canvasContext: context, viewport });
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
+
+        renderTaskRef.current = page.render(renderContext);
         await renderTaskRef.current.promise;
-        renderTaskRef.current = null;
         console.log("PDF rendered successfully");
 
+        renderTaskRef.current = null;
+        
+        // Clean up PDF document
+        pdfDoc.destroy();
       } catch (err) {
-        console.error("PDF loading error:", err);
-        setError(err.message);
+        if (err.name !== 'RenderingCancelledException') {
+          console.error("PDF loading error:", err);
+          setError(err.message || "Failed to load PDF");
+        }
       } finally {
         setLoading(false);
         loadingTaskRef.current = null;
       }
     };
 
-    if (pdfUrl) {
-      loadPdf();
-    } else {
-      cleanup();
-      setPdf(null);
-      setError(null);
-    }
+    loadPdf();
 
-    // Cleanup on unmount or pdfUrl change
-    return cleanup;
-  }, [pdfUrl]);
+    // Cleanup function
+    return () => {
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (e) {
+          // Ignore cancellation errors
+        }
+        renderTaskRef.current = null;
+      }
+      if (loadingTaskRef.current) {
+        try {
+          loadingTaskRef.current.destroy();
+        } catch (e) {
+          // Ignore destruction errors
+        }
+        loadingTaskRef.current = null;
+      }
+    };
+  }, [pdfUrl, pageScale]);
 
-  // draw highlights whenever they change
+  // Draw highlights on overlay canvas
   useEffect(() => {
-    if (!highlights?.length || !canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-    const scale = 1.5;
+    if (!highlights?.length || !overlayRef.current) return;
+    
+    const canvas = overlayRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    // Match overlay size to PDF canvas
+    if (canvasRef.current) {
+      canvas.width = canvasRef.current.width;
+      canvas.height = canvasRef.current.height;
+    }
+    
+    // Clear previous highlights
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw new highlights
     ctx.strokeStyle = 'red';
-    ctx.lineWidth = 2;
-    highlights.forEach(({x,y,w,h})=>{
-      ctx.strokeRect(x*scale, y*scale, w*scale, h*scale);
+    ctx.lineWidth = 3;
+    ctx.setLineDash([5, 5]);
+    
+    highlights.forEach(({ x, y, w, h }) => {
+      ctx.strokeRect(x * pageScale, y * pageScale, w * pageScale, h * pageScale);
     });
-  }, [highlights]);
+  }, [highlights, pageScale]);
 
   if (error) {
     return (
@@ -114,7 +148,7 @@ export default function PdfViewer({ pdfUrl, highlights }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative inline-block">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
           <div className="flex items-center gap-2">
@@ -123,7 +157,14 @@ export default function PdfViewer({ pdfUrl, highlights }) {
           </div>
         </div>
       )}
-      <canvas ref={canvasRef} className="border w-full" />
+      <div className="relative">
+        <canvas ref={canvasRef} className="border" />
+        <canvas 
+          ref={overlayRef} 
+          className="absolute top-0 left-0 pointer-events-none" 
+          style={{ border: 'none' }}
+        />
+      </div>
     </div>
   );
 }
