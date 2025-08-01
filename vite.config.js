@@ -17,6 +17,11 @@ try {
 export default defineConfig({
   plugins: [react()],
   base: './', // Fix for Electron - use relative paths
+  server: {
+    port: 5200,
+    strictPort: true, // Fail if port 5200 is not available
+    host: 'localhost'
+  },
   optimizeDeps: {
     include: ['pdfjs-dist']
   },

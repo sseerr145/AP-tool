@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as pdfjs from "pdfjs-dist";
 
-// Configure PDF.js worker with fallback
-if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = './pdf.worker.js';
+// Configure PDF.js worker - SINGLE source of truth
+if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
 }
 
 export default function PdfViewer({ pdfUrl, highlights }) {
