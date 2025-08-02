@@ -230,22 +230,36 @@ function App() {
   };
 
   const extractInvoiceFields = (ocrData) => {
-    console.log("OCR Data structure:", ocrData);
+    console.log("🔍 OCR Data structure:", ocrData);
+    console.log("🔍 OCR Data keys:", Object.keys(ocrData));
 
     const lines = ocrData.lines || [];
     const words = ocrData.words || [];
     const paragraphs = ocrData.paragraphs || [];
     const fields = [];
 
-    console.log("Processing OCR data:", { 
+    console.log("🔍 Processing OCR data:", { 
       lines: lines.length, 
       words: words.length, 
       paragraphs: paragraphs.length 
     });
 
-    // Get all text for pattern matching
-    const allText = lines.map(line => line.text).join(' ');
-    console.log("All extracted text:", allText);
+    // Get all text for pattern matching - use raw text if lines are empty
+    let allText = lines.map(line => line.text).join(' ');
+    if (!allText || allText.trim().length === 0) {
+      // Fallback to raw text if lines structure is empty
+      allText = ocrData.text || '';
+      console.log("🔧 Using fallback raw text for pattern matching");
+    }
+    console.log("🔍 All extracted text:", allText);
+    console.log("🔍 Raw text from result.data.text:", ocrData.text);
+
+    // Test basic pattern matching
+    if (allText.includes("561DSSBM")) {
+      console.log("✅ Found expected invoice number in text!");
+    } else {
+      console.log("❌ Expected invoice number not found in text");
+    }
 
     // Enhanced invoice field patterns optimized for scanned documents
     const patterns = {
@@ -303,10 +317,13 @@ function App() {
     };
 
     // Enhanced pattern matching
+    console.log("🔍 Starting pattern matching with text length:", allText.length);
     Object.entries(patterns).forEach(([fieldType, patternArray]) => {
+      console.log(`🔍 Testing ${fieldType} patterns...`);
       patternArray.forEach((pattern, patternIndex) => {
         const match = allText.match(pattern);
         if (match && match[1]) {
+          console.log(`✅ Found ${fieldType}:`, match[1], "using pattern:", pattern.toString());
           // Find the line that contains this match to get coordinates
           const matchingLine = lines.find(line => {
             const lineText = line.text.toLowerCase();
@@ -425,7 +442,9 @@ function App() {
       }
     });
 
-    console.log("Extracted fields:", uniqueFields);
+    console.log("🎯 Final extracted fields:", uniqueFields);
+    console.log("🎯 Structured fields found:", structuredFields.length);
+    console.log("🎯 Text fields found:", textFields.length);
     return uniqueFields.sort((a, b) => {
       // Sort structured fields first, then by Y position
       const aIsStructured = structuredTypes.includes(a.type);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { loadPdfForPreview } from "../utils/pdfService";
+import { renderingManager } from "../utils/renderingState";
 
 export default function PdfViewer({ pdfData, highlights }) {
   const canvasRef = useRef(null);
@@ -14,92 +15,95 @@ export default function PdfViewer({ pdfData, highlights }) {
     const loadPdf = async () => {
       if (!pdfData || !canvasRef.current) return;
       
-      // Prevent multiple simultaneous render operations
-      if (isRenderingRef.current) {
-        console.log("Render already in progress, skipping...");
-        return;
-      }
-      
-      isRenderingRef.current = true;
-      
-      // Create fresh ArrayBuffer for preview to avoid detachment issues
-      let arrayBuffer;
-      if (pdfData instanceof File) {
-        arrayBuffer = await pdfData.arrayBuffer();
-      } else {
-        arrayBuffer = pdfData; // Fallback for existing ArrayBuffer
-      }
+      // Use global rendering manager to prevent conflicts
+      const renderFunction = async () => {
+        // Cancel any previous render task first
+        if (renderTaskRef.current) {
+          try {
+            console.log("Cancelling previous render task...");
+            renderTaskRef.current.cancel();
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (e) {
+            console.log("Previous render task cleanup:", e.message);
+          }
+          renderTaskRef.current = null;
+        }
+        
+        // Create fresh ArrayBuffer for preview to avoid detachment issues
+        let arrayBuffer;
+        if (pdfData instanceof File) {
+          arrayBuffer = await pdfData.arrayBuffer();
+        } else {
+          arrayBuffer = pdfData; // Fallback for existing ArrayBuffer
+        }
 
-      // Cancel any ongoing render task and wait for it to complete
-      if (renderTaskRef.current) {
+        setLoading(true);
+        setError(null);
+
         try {
-          console.log("Cancelling previous render task...");
-          renderTaskRef.current.cancel();
-          // Wait a moment for cancellation to complete
-          await new Promise(resolve => setTimeout(resolve, 50));
-        } catch (e) {
-          console.log("Render task already completed");
+          console.log("Loading PDF from data");
+
+          const pdfDoc = await loadPdfForPreview(arrayBuffer);
+          console.log("PDF loaded successfully, pages:", pdfDoc.numPages);
+
+          const page = await pdfDoc.getPage(1);
+          const viewport = page.getViewport({ scale: pageScale });
+
+          const canvas = canvasRef.current;
+          if (!canvas) {
+            console.log("Canvas not available, skipping render");
+            return;
+          }
+
+          const context = canvas.getContext("2d");
+          if (!context) {
+            console.log("Canvas context not available");
+            return;
+          }
+
+          // Clear and reset canvas completely before rendering
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          context.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Set overlay dimensions to match canvas
+          if (overlayRef.current) {
+            overlayRef.current.style.width = `${viewport.width}px`;
+            overlayRef.current.style.height = `${viewport.height}px`;
+          }
+
+          const renderContext = {
+            canvasContext: context,
+            viewport: viewport,
+          };
+
+          renderTaskRef.current = page.render(renderContext);
+          await renderTaskRef.current.promise;
+
+          console.log("PDF rendered successfully");
+
+          // Cleanup
+          pdfDoc.destroy();
+          setLoading(false);
+          renderTaskRef.current = null;
+        } catch (error) {
+          console.error("Error loading PDF:", error);
+          setError(`Failed to load PDF: ${error.message}`);
+          setLoading(false);
+          renderTaskRef.current = null;
+        } finally {
+          // Always reset rendering flag
+          isRenderingRef.current = false;
         }
-        renderTaskRef.current = null;
-      }
+      };
 
-      setLoading(true);
-      setError(null);
-
+      // Execute rendering through global manager
       try {
-        console.log("Loading PDF from data");
-
-        const pdfDoc = await loadPdfForPreview(arrayBuffer);
-        console.log("PDF loaded successfully, pages:", pdfDoc.numPages);
-
-        const page = await pdfDoc.getPage(1);
-        const viewport = page.getViewport({ scale: pageScale });
-
-        const canvas = canvasRef.current;
-        if (!canvas) {
-          console.log("Canvas not available, skipping render");
-          return;
-        }
-
-        const context = canvas.getContext("2d");
-        if (!context) {
-          console.log("Canvas context not available");
-          return;
-        }
-
-        // Clear and reset canvas completely before rendering
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Set overlay dimensions to match canvas
-        if (overlayRef.current) {
-          overlayRef.current.style.width = `${viewport.width}px`;
-          overlayRef.current.style.height = `${viewport.height}px`;
-        }
-
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport,
-        };
-
-        renderTaskRef.current = page.render(renderContext);
-        await renderTaskRef.current.promise;
-
-        console.log("PDF rendered successfully");
-
-        // Cleanup
-        pdfDoc.destroy();
-        setLoading(false);
-        renderTaskRef.current = null;
+        await renderingManager.executeRender(renderFunction, 'PDF Preview');
       } catch (error) {
-        console.error("Error loading PDF:", error);
-        setError(`Failed to load PDF: ${error.message}`);
+        console.error("Rendering manager error:", error);
+        setError("PDF rendering failed. Please try again.");
         setLoading(false);
-        renderTaskRef.current = null;
-      } finally {
-        // Always reset rendering flag
-        isRenderingRef.current = false;
       }
     };
 
