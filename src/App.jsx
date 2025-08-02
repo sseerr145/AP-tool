@@ -3,11 +3,7 @@ import { Upload, FileText, CheckCircle, AlertCircle, Download, Eye, EyeOff, Load
 import PdfViewer from "./components/PdfViewer";
 import ExtractedFieldsPanel from "./components/ExtractedFieldsPanel";
 import Tesseract from "tesseract.js";
-import * as pdfjs from "pdfjs-dist";
-import { configurePdfJs, PDF_LOAD_OPTIONS } from "./utils/pdfConfig";
-
-// Ensure PDF.js is configured for Electron
-configurePdfJs();
+import { loadPdfForOCR, pdfPageToImage } from "./utils/pdfService";
 
 function App() {
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -61,22 +57,27 @@ function App() {
     }
   };
 
-  const handleFile = (file) => {
+  const [pdfFile, setPdfFile] = useState(null); // Store actual file, not URL
+
+  const handleFile = async (file) => {
     if (file.type !== 'application/pdf') {
       setError('Please upload a PDF file');
       return;
     }
     
-    const objectUrl = URL.createObjectURL(file);
-    setPdfUrl(objectUrl);
+    console.log('File selected:', file.name, (file.size / 1024 / 1024).toFixed(2) + ' MB');
+    
+    // Store ONLY the file - we'll create fresh ArrayBuffers when needed
+    setPdfFile(file);
+    setPdfUrl(file); // Pass the file directly, not ArrayBuffer
+    
     setFields([]);
     setHighlight([]);
     setError('');
-    console.log('File selected:', file.name, (file.size / 1024 / 1024).toFixed(2) + ' MB');
   };
 
   const extractInvoiceData = async () => {
-    if (!pdfUrl) return;
+    if (!pdfFile) return;
 
     setIsProcessing(true);
     setOcrProgress(0);
@@ -86,12 +87,8 @@ function App() {
       console.log("Starting OCR process...");
       setProcessingStep('Converting PDF to image...');
       
-      // Convert the object URL back to a file for processing
-      const response = await fetch(pdfUrl);
-      const blob = await response.blob();
-      const file = new File([blob], "uploaded.pdf", { type: "application/pdf" });
-      
-      const imageData = await pdfToImage(file);
+      // Use the stored file directly (no more URL conversion needed)
+      const imageData = await pdfToImage(pdfFile);
 
       console.log("Running Tesseract OCR...");
       setProcessingStep('Running OCR recognition...');
@@ -152,46 +149,38 @@ function App() {
     console.log("Converting PDF to image for OCR...");
 
     try {
+      // Create fresh ArrayBuffer for OCR to avoid detachment issues
       const arrayBuffer = await file.arrayBuffer();
-      const loadingTask = pdfjs.getDocument({ 
-        data: arrayBuffer,
-        ...PDF_LOAD_OPTIONS,
+      const pdf = await loadPdfForOCR(arrayBuffer);
+      
+      // Use service to convert to image
+      const imageDataUrl = await pdfPageToImage(pdf, 1, 3.0);
+      
+      // Convert data URL to canvas for preprocessing
+      const img = new Image();
+      img.src = imageDataUrl;
+      
+      return new Promise((resolve) => {
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          context.drawImage(img, 0, 0);
+          
+          // Enhanced preprocessing for scanned documents
+          const preprocessedCanvas = preprocessImageForOCR(canvas);
+          
+          // Cleanup
+          pdf.destroy();
+          
+          console.log("PDF converted and preprocessed for OCR", { 
+            width: preprocessedCanvas.width, 
+            height: preprocessedCanvas.height 
+          });
+          resolve(preprocessedCanvas);
+        };
       });
-
-      const pdf = await loadingTask.promise;
-      const page = await pdf.getPage(1);
-
-      // Higher scale for better OCR accuracy on scanned documents
-      const scale = 3.0; // Increased from 2.5 for better quality
-      const viewport = page.getViewport({ scale });
-
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      // Enable image smoothing for better quality
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-
-      const renderContext = {
-        canvasContext: context,
-        viewport: viewport,
-      };
-
-      await page.render(renderContext).promise;
-
-      // Enhanced preprocessing for scanned documents
-      const preprocessedCanvas = preprocessImageForOCR(canvas);
-
-      // Cleanup
-      pdf.destroy();
-
-      console.log("PDF converted and preprocessed for OCR", { 
-        width: preprocessedCanvas.width, 
-        height: preprocessedCanvas.height 
-      });
-      return preprocessedCanvas;
     } catch (error) {
       console.error("PDF to image conversion failed:", error);
       throw new Error('PDF conversion failed: ' + error.message);
@@ -712,7 +701,7 @@ function App() {
                 </h3>
                 <div className="bg-gray-50 rounded-2xl p-4 flex-1">
                   <div className="bg-white rounded-xl shadow-lg overflow-hidden h-full">
-                    <PdfViewer pdfUrl={pdfUrl} highlights={highlight} />
+                    <PdfViewer pdfData={pdfUrl} highlights={highlight} />
                   </div>
                 </div>
               </div>

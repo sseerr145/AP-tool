@@ -1,7 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { copyFileSync, existsSync } from 'fs'
+import { resolve } from 'path'
 
-// No longer copying PDF.js worker - we're using single-threaded mode
+// Copy PDF.js worker to public directory 
+try {
+  const workerSrc = resolve(__dirname, 'node_modules/pdfjs-dist/build/pdf.worker.mjs')
+  const workerDest = resolve(__dirname, 'public/pdf.worker.mjs')
+  
+  if (existsSync(workerSrc)) {
+    copyFileSync(workerSrc, workerDest)
+    console.log('✅ PDF.js worker copied to public directory')
+  } else {
+    console.warn('⚠️  PDF.js worker not found, will use URL import')
+  }
+} catch (err) {
+  console.warn('⚠️  Failed to copy PDF.js worker:', err.message)
+}
 
 export default defineConfig({
   plugins: [react()],
@@ -12,20 +27,9 @@ export default defineConfig({
     host: 'localhost'
   },
   optimizeDeps: {
-    include: ['pdfjs-dist'],
-    // Exclude worker from optimization
-    exclude: ['pdfjs-dist/build/pdf.worker.js', 'pdfjs-dist/build/pdf.worker.mjs']
+    include: ['pdfjs-dist']
   },
   define: {
-    global: 'globalThis',
-    // Signal that workers are disabled
-    'process.env.PDF_WORKER_DISABLED': true
-  },
-  // Stub out any worker imports
-  resolve: {
-    alias: {
-      'pdfjs-dist/build/pdf.worker.js': '/dev/null',
-      'pdfjs-dist/build/pdf.worker.mjs': '/dev/null'
-    }
+    global: 'globalThis'
   }
 })

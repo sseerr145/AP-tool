@@ -1,71 +1,76 @@
 import { useEffect, useRef, useState } from "react";
-import * as pdfjs from "pdfjs-dist";
-import { configurePdfJs, PDF_LOAD_OPTIONS } from "../utils/pdfConfig";
+import { loadPdfForPreview } from "../utils/pdfService";
 
-// Ensure PDF.js is configured for Electron
-configurePdfJs();
-
-export default function PdfViewer({ pdfUrl, highlights }) {
+export default function PdfViewer({ pdfData, highlights }) {
   const canvasRef = useRef(null);
   const overlayRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pageScale, setPageScale] = useState(1.2);
   const renderTaskRef = useRef(null);
-  const loadingTaskRef = useRef(null);
+  const isRenderingRef = useRef(false);
 
   useEffect(() => {
     const loadPdf = async () => {
-      if (!pdfUrl || !canvasRef.current) return;
+      if (!pdfData || !canvasRef.current) return;
+      
+      // Prevent multiple simultaneous render operations
+      if (isRenderingRef.current) {
+        console.log("Render already in progress, skipping...");
+        return;
+      }
+      
+      isRenderingRef.current = true;
+      
+      // Create fresh ArrayBuffer for preview to avoid detachment issues
+      let arrayBuffer;
+      if (pdfData instanceof File) {
+        arrayBuffer = await pdfData.arrayBuffer();
+      } else {
+        arrayBuffer = pdfData; // Fallback for existing ArrayBuffer
+      }
 
-      // Cancel any ongoing render task
+      // Cancel any ongoing render task and wait for it to complete
       if (renderTaskRef.current) {
         try {
+          console.log("Cancelling previous render task...");
           renderTaskRef.current.cancel();
+          // Wait a moment for cancellation to complete
+          await new Promise(resolve => setTimeout(resolve, 50));
         } catch (e) {
           console.log("Render task already completed");
         }
         renderTaskRef.current = null;
       }
 
-      // Destroy any previous loading task
-      if (loadingTaskRef.current) {
-        try {
-          loadingTaskRef.current.destroy();
-        } catch (e) {
-          console.log("Loading task already destroyed");
-        }
-        loadingTaskRef.current = null;
-      }
-
       setLoading(true);
       setError(null);
 
       try {
-        console.log("Loading PDF:", pdfUrl);
+        console.log("Loading PDF from data");
 
-        loadingTaskRef.current = pdfjs.getDocument({
-          url: pdfUrl,
-          ...PDF_LOAD_OPTIONS,
-        });
-
-        const pdfDoc = await loadingTaskRef.current.promise;
+        const pdfDoc = await loadPdfForPreview(arrayBuffer);
         console.log("PDF loaded successfully, pages:", pdfDoc.numPages);
 
         const page = await pdfDoc.getPage(1);
         const viewport = page.getViewport({ scale: pageScale });
 
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas) {
+          console.log("Canvas not available, skipping render");
+          return;
+        }
 
         const context = canvas.getContext("2d");
+        if (!context) {
+          console.log("Canvas context not available");
+          return;
+        }
 
-        // Clear canvas before rendering
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Set canvas dimensions
-        canvas.height = viewport.height;
+        // Clear and reset canvas completely before rendering
         canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        context.clearRect(0, 0, canvas.width, canvas.height);
 
         // Set overlay dimensions to match canvas
         if (overlayRef.current) {
@@ -86,10 +91,15 @@ export default function PdfViewer({ pdfUrl, highlights }) {
         // Cleanup
         pdfDoc.destroy();
         setLoading(false);
+        renderTaskRef.current = null;
       } catch (error) {
         console.error("Error loading PDF:", error);
         setError(`Failed to load PDF: ${error.message}`);
         setLoading(false);
+        renderTaskRef.current = null;
+      } finally {
+        // Always reset rendering flag
+        isRenderingRef.current = false;
       }
     };
 
@@ -103,16 +113,12 @@ export default function PdfViewer({ pdfUrl, highlights }) {
         } catch (e) {
           console.log("Cleanup: Render task already completed");
         }
+        renderTaskRef.current = null;
       }
-      if (loadingTaskRef.current) {
-        try {
-          loadingTaskRef.current.destroy();
-        } catch (e) {
-          console.log("Cleanup: Loading task already destroyed");
-        }
-      }
+      // Reset rendering flag on cleanup
+      isRenderingRef.current = false;
     };
-  }, [pdfUrl, pageScale]);
+  }, [pdfData, pageScale]);
 
   // Handle zoom controls
   const handleZoom = (direction) => {
@@ -206,7 +212,7 @@ export default function PdfViewer({ pdfUrl, highlights }) {
       </div>
 
       {/* Page Info */}
-      {!loading && !error && pdfUrl && (
+      {!loading && !error && pdfData && (
         <div className="mt-3 text-center text-sm text-gray-500">
           Page 1 of 1 • Scale: {Math.round(pageScale * 100)}%
         </div>
