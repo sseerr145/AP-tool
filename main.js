@@ -14,9 +14,10 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       enableRemoteModule: false,
-      webSecurity: true,
+      webSecurity: true, // Secure for local-only operation
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
+      nodeIntegration: false,
       preload: path.join(__dirname, 'preload.js'),
     },
   });
