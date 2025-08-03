@@ -21,18 +21,16 @@ function createWindow() {
     },
   });
   
-  // In development, load from Vite dev server
+  // Load the standalone HTML file
+  const indexPath = path.join(__dirname, 'public/index.html');
+  console.log('Loading from:', indexPath);
+  win.loadFile(indexPath).catch(err => {
+    console.error('Failed to load file:', err);
+  });
+  
+  // Open dev tools in development
   if (process.env.NODE_ENV === 'development') {
-    console.log('Loading from dev server...');
-    win.loadURL('http://localhost:5200'); // Fixed to match Vite's actual port
     win.webContents.openDevTools();
-  } else {
-    // In production, load from built files
-    const indexPath = path.join(__dirname, 'dist/index.html');
-    console.log('Loading from:', indexPath);
-    win.loadFile(indexPath).catch(err => {
-      console.error('Failed to load file:', err);
-    });
   }
 
   // Add error handling
