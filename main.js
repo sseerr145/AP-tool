@@ -12,17 +12,17 @@ function createWindow() {
     show: false, // Don't show until ready
     center: true,
     webPreferences: {
-      contextIsolation: true,
+      contextIsolation: false,
       enableRemoteModule: false,
-      webSecurity: true, // Secure for local-only operation
-      allowRunningInsecureContent: false,
+      webSecurity: false,
+      allowRunningInsecureContent: true,
       experimentalFeatures: false,
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.js'),
     },
   });
   
-  // Load the standalone HTML file
+  // Load the main app
   const indexPath = path.join(__dirname, 'public/index.html');
   console.log('Loading from:', indexPath);
   win.loadFile(indexPath).catch(err => {
@@ -39,10 +39,15 @@ function createWindow() {
     console.error('Failed to load:', errorCode, errorDescription);
   });
 
+  // Forward console logs from renderer to main process
+  win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[RENDERER] ${message}`);
+  });
+
   win.webContents.on('dom-ready', () => {
     console.log('DOM ready - page loaded successfully');
+    win.webContents.openDevTools(); // Force open dev tools to see errors
     win.show(); // Show window after DOM is ready
-    // win.webContents.openDevTools(); // Open dev tools to see any errors
     console.log('Window shown');
   });
 

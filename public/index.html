@@ -4,19 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Extraction Tool</title>
-    <link rel="stylesheet" href="libs/tailwind.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom animations */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        /* Modern gradients */
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -27,226 +16,154 @@
             border: 1px solid rgba(255, 255, 255, 0.18);
         }
         
-        /* Smooth transitions */
-        * {
-            transition: all 0.2s ease;
-        }
-        
-        /* PDF canvas styling */
-        #pdf-canvas {
-            max-width: 100%;
-            height: auto;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        
-        /* Drag and drop styling */
         .drag-over {
             border-color: #667eea !important;
             background-color: rgba(102, 126, 234, 0.1) !important;
         }
         
-        /* Loading state */
-        #loading-message {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-        
-        /* Offline indicator */
-        .offline-ready {
-            background-color: #10b981;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
+        #pdf-canvas {
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <!-- Offline Ready Indicator -->
-    <div class="offline-ready">
-        🔒 100% Offline & Secure
+    <div class="gradient-bg py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold text-white text-center">Invoice Extraction Tool</h1>
+            <p class="text-purple-100 text-center mt-2">Upload your invoice for intelligent data extraction</p>
+        </div>
     </div>
     
-    <!-- Loading Message -->
-    <div id="loading-message">
-        <div class="flex items-center space-x-3">
-            <div class="pulse">
-                <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-            </div>
-            <span>Initializing Local Invoice Extraction Tool...</span>
-        </div>
-    </div>
-
-    <div id="app-content" style="display: none;">
-        <div class="gradient-bg py-6">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold text-white text-center">🔒 Secure Invoice Extraction Tool</h1>
-                <p class="text-purple-100 text-center mt-2">100% Offline • No Internet Required • Complete Privacy</p>
-            </div>
-        </div>
-        
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Upload Section -->
-            <div class="glass-effect rounded-xl shadow-lg p-6 mb-6">
-                <div class="max-w-xl mx-auto">
-                    <label for="file-upload" class="block">
-                        <div id="drop-zone" class="border-2 border-dashed border-purple-300 rounded-lg p-8 text-center hover:border-purple-400 cursor-pointer transition-colors">
-                            <svg class="mx-auto h-12 w-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                            </svg>
-                            <p class="mt-2 text-sm text-gray-600">
-                                <span class="font-semibold text-purple-600">Click to upload</span> or drag and drop
-                            </p>
-                            <p class="text-xs text-gray-500 mt-1">PDF files only (up to 50MB) • Processed locally on your machine</p>
-                        </div>
-                        <input id="file-upload" type="file" class="hidden" accept=".pdf" />
-                    </label>
-                </div>
-            </div>
-
-            <!-- Processing Status -->
-            <div id="processing-status" class="hidden glass-effect rounded-xl shadow-lg p-6 mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="pulse">
-                        <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Upload Section -->
+        <div class="glass-effect rounded-xl shadow-lg p-6 mb-6">
+            <div class="max-w-xl mx-auto">
+                <label for="file-upload" class="block">
+                    <div id="drop-zone" class="border-2 border-dashed border-purple-300 rounded-lg p-8 text-center hover:border-purple-400 cursor-pointer transition-colors">
+                        <svg class="mx-auto h-12 w-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
+                        <p class="mt-2 text-sm text-gray-600">
+                            <span class="font-semibold text-purple-600">Click to upload</span> or drag and drop
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">PDF files only (up to 50MB)</p>
                     </div>
-                    <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-gray-900">Processing Invoice Locally</h3>
-                        <p id="processing-message" class="text-sm text-gray-600">Your data never leaves your computer...</p>
-                        <div class="mt-3">
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div id="progress-bar" class="bg-purple-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                            </div>
-                            <p id="progress-text" class="text-xs text-gray-500 mt-1">0% complete</p>
+                    <input id="file-upload" type="file" class="hidden" accept=".pdf" />
+                </label>
+            </div>
+        </div>
+
+        <!-- Processing Status -->
+        <div id="processing-status" class="hidden glass-effect rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin">
+                    <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">Processing Invoice</h3>
+                    <p id="processing-message" class="text-sm text-gray-600">Extracting data from your invoice...</p>
+                    <div class="mt-3">
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="progress-bar" class="bg-purple-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                         </div>
+                        <p id="progress-text" class="text-xs text-gray-500 mt-1">0% complete</p>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Main Content Area -->
-            <div id="main-content" class="hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- PDF Preview (Left) -->
-                    <div class="glass-effect rounded-xl shadow-lg p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-gray-900">Document Preview</h2>
-                            <div class="flex items-center space-x-2">
-                                <button id="prev-page" class="p-2 text-gray-600 hover:text-purple-600 disabled:opacity-50" disabled>
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                    </svg>
-                                </button>
-                                <span id="page-info" class="text-sm text-gray-600">Page 1 of 1</span>
-                                <button id="next-page" class="p-2 text-gray-600 hover:text-purple-600 disabled:opacity-50" disabled>
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div id="pdf-container" class="overflow-auto max-h-[600px] border border-gray-200 rounded-lg bg-gray-50 p-4">
-                            <canvas id="pdf-canvas" class="mx-auto"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Extracted Data (Right) -->
-                    <div class="glass-effect rounded-xl shadow-lg p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-gray-900">Extracted Data</h2>
-                            <button id="clear-process" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
-                                Clear & Process Next
+        <!-- Main Content Area -->
+        <div id="main-content" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- PDF Preview (Left) -->
+                <div class="glass-effect rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Document Preview</h2>
+                        <div class="flex items-center space-x-2">
+                            <button id="prev-page" class="p-2 text-gray-600 hover:text-purple-600 disabled:opacity-50" disabled>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                            </button>
+                            <span id="page-info" class="text-sm text-gray-600">Page 1 of 1</span>
+                            <button id="next-page" class="p-2 text-gray-600 hover:text-purple-600 disabled:opacity-50" disabled>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
                             </button>
                         </div>
-                        
-                        <div class="space-y-4">
-                            <!-- Invoice Details Grid -->
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
-                                    <input type="text" id="invoice-number" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="INV-001">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Date</label>
-                                    <input type="date" id="invoice-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
-                                    <input type="text" id="vendor-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Company Name">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
-                                    <input type="text" id="total-amount" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="$0.00">
-                                </div>
-                            </div>
+                    </div>
+                    <div id="pdf-container" class="overflow-auto max-h-[600px] border border-gray-200 rounded-lg bg-gray-50 p-4">
+                        <canvas id="pdf-canvas" class="mx-auto"></canvas>
+                    </div>
+                </div>
 
-                            <!-- Line Items -->
+                <!-- Extracted Data (Right) -->
+                <div class="glass-effect rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Extracted Data</h2>
+                        <button id="clear-process" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                            Clear & Process Next
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- Invoice Details Grid -->
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <h3 class="text-sm font-medium text-gray-700 mb-2">Line Items</h3>
-                                <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                    <table class="min-w-full divide-y divide-gray-200">
-                                        <thead class="bg-gray-50">
-                                            <tr>
-                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="line-items" class="bg-white divide-y divide-gray-200">
-                                            <!-- Line items will be added here -->
-                                        </tbody>
-                                    </table>
-                                    <div class="px-4 py-2 bg-gray-50">
-                                        <button id="add-line-item" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
-                                            + Add Line Item
-                                        </button>
-                                    </div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
+                                <input type="text" id="invoice-number" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="INV-001">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Date</label>
+                                <input type="date" id="invoice-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
+                                <input type="text" id="vendor-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Company Name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+                                <input type="text" id="total-amount" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="$0.00">
+                            </div>
+                        </div>
+
+                        <!-- Line Items -->
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Line Items</h3>
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="line-items" class="bg-white divide-y divide-gray-200">
+                                        <!-- Line items will be added here -->
+                                    </tbody>
+                                </table>
+                                <div class="px-4 py-2 bg-gray-50">
+                                    <button id="add-line-item" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                                        + Add Line Item
+                                    </button>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Action Buttons -->
-                            <div class="flex space-x-3 pt-4">
-                                <button id="save-data" class="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-                                    💾 Save Invoice Data
-                                </button>
-                                <button id="export-csv" class="flex-1 border border-purple-600 text-purple-600 px-4 py-2 rounded-lg font-medium hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-                                    📊 Export to CSV
-                                </button>
-                            </div>
+                        <!-- Action Buttons -->
+                        <div class="flex space-x-3 pt-4">
+                            <button id="save-data" class="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700">
+                                Save Invoice Data
+                            </button>
+                            <button id="export-csv" class="flex-1 border border-purple-600 text-purple-600 px-4 py-2 rounded-lg font-medium hover:bg-purple-50">
+                                Export to CSV
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -254,40 +171,239 @@
         </div>
     </div>
 
-    <!-- Load LOCAL libraries only -->
-    <script src="libs/pdf.min.js"></script>
-    <script src="libs/tesseract.min.js"></script>
+    <!-- Load libraries from different CDN -->
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
 
     <script>
-        // Initialize app when local libraries are loaded
-        function initializeApp() {
-            console.log('🚀 Initializing OFFLINE Invoice Extraction Tool...');
-            
-            // Hide loading message and show app
-            document.getElementById('loading-message').style.display = 'none';
-            document.getElementById('app-content').style.display = 'block';
-            
-            // Configure PDF.js with local worker
-            if (typeof pdfjsLib !== 'undefined') {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'libs/pdf.worker.min.js';
-                console.log('✅ PDF.js configured with local worker');
-            } else {
-                console.error('❌ PDF.js not loaded');
-                return;
-            }
-            
-            if (typeof Tesseract === 'undefined') {
-                console.error('❌ Tesseract.js not loaded');
-                return;
-            } else {
-                console.log('✅ Tesseract.js loaded locally');
-            }
+        console.log('🚀 Script starting...');
+        
+        // Check if libraries loaded
+        console.log('📚 Checking libraries:');
+        console.log('- pdfjsLib:', typeof pdfjsLib !== 'undefined' ? '✅ LOADED' : '❌ MISSING');
+        console.log('- Tesseract:', typeof Tesseract !== 'undefined' ? '✅ LOADED' : '❌ MISSING');
+        
+        // Configure PDF.js immediately
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            console.log('✅ PDF.js configured');
+        } else {
+            console.error('❌ PDF.js not loaded!');
+        }
 
-            // State management
-            let currentPDF = null;
-            let currentPage = 1;
-            let totalPages = 0;
-            let extractedData = {
+        // Simple app state
+        let currentPDF = null;
+        let currentPage = 1;
+        let totalPages = 0;
+        let extractedData = {
+            invoiceNumber: '',
+            invoiceDate: '',
+            vendorName: '',
+            totalAmount: '',
+            lineItems: []
+        };
+
+        // Get elements
+        const fileUpload = document.getElementById('file-upload');
+        const dropZone = document.getElementById('drop-zone');
+        const processingStatus = document.getElementById('processing-status');
+        const processingMessage = document.getElementById('processing-message');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const mainContent = document.getElementById('main-content');
+        const pdfCanvas = document.getElementById('pdf-canvas');
+        const pageInfo = document.getElementById('page-info');
+        const prevPageBtn = document.getElementById('prev-page');
+        const nextPageBtn = document.getElementById('next-page');
+        const clearProcessBtn = document.getElementById('clear-process');
+        const saveDataBtn = document.getElementById('save-data');
+        const exportCsvBtn = document.getElementById('export-csv');
+        const addLineItemBtn = document.getElementById('add-line-item');
+        const lineItemsTable = document.getElementById('line-items');
+
+        // Update progress
+        function updateProgress(percent, message = '') {
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = `${Math.round(percent)}% complete`;
+            if (message) {
+                processingMessage.textContent = message;
+            }
+        }
+
+        // File upload
+        console.log('🔧 Setting up file upload event listeners...');
+        fileUpload.addEventListener('change', function(event) {
+            console.log('📁 File input changed!', event.target.files);
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                console.log('✅ Valid PDF file selected:', file.name);
+                handleFile(file);
+            } else {
+                console.error('❌ Invalid file type:', file ? file.type : 'no file');
+                alert('Please select a PDF file');
+            }
+        });
+
+        // Drag and drop
+        console.log('🎯 Setting up drag & drop event listeners...');
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+            console.log('📥 Drag over');
+        });
+        
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            console.log('📤 Drag leave');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            console.log('📂 File dropped!', e.dataTransfer.files);
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                console.log('✅ Valid PDF dropped:', files[0].name);
+                handleFile(files[0]);
+            } else {
+                console.error('❌ Invalid file dropped:', files[0] ? files[0].type : 'no file');
+                alert('Please drop a PDF file');
+            }
+        });
+
+        // Handle file processing
+        async function handleFile(file) {
+            console.log('🔄 Starting handleFile with:', file.name, file.size, 'bytes');
+            
+            // Check if libraries are available
+            if (typeof pdfjsLib === 'undefined') {
+                console.error('❌ PDF.js not available!');
+                alert('PDF.js library not loaded. Please refresh and try again.');
+                return;
+            }
+            
+            // Show processing
+            console.log('📊 Showing processing UI...');
+            processingStatus.classList.remove('hidden');
+            mainContent.classList.add('hidden');
+            updateProgress(0, 'Loading PDF...');
+
+            try {
+                // Load PDF
+                console.log('📖 Reading file as ArrayBuffer...');
+                updateProgress(20, 'Reading file...');
+                const arrayBuffer = await file.arrayBuffer();
+                console.log('✅ ArrayBuffer created:', arrayBuffer.byteLength, 'bytes');
+                
+                console.log('🔧 Loading PDF with PDF.js...');
+                updateProgress(40, 'Loading PDF...');
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                currentPDF = pdf;
+                totalPages = pdf.numPages;
+                console.log('PDF loaded with', totalPages, 'pages');
+                
+                // Render first page
+                updateProgress(60, 'Rendering preview...');
+                await renderPage(1);
+                
+                // Extract text
+                updateProgress(80, 'Extracting text...');
+                await extractText(pdf);
+                
+                updateProgress(100, 'Complete!');
+                
+                // Show results
+                setTimeout(() => {
+                    processingStatus.classList.add('hidden');
+                    mainContent.classList.remove('hidden');
+                    updateUI();
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing PDF: ' + error.message);
+                processingStatus.classList.add('hidden');
+            }
+        }
+
+        // Render PDF page
+        async function renderPage(pageNum) {
+            if (!currentPDF) return;
+            
+            const page = await currentPDF.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 });
+            
+            const canvas = pdfCanvas;
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+            
+            // Update page info
+            pageInfo.textContent = `Page ${pageNum} of ${totalPages}`;
+            prevPageBtn.disabled = pageNum <= 1;
+            nextPageBtn.disabled = pageNum >= totalPages;
+            currentPage = pageNum;
+            
+            console.log('Rendered page', pageNum);
+        }
+
+        // Extract text from PDF
+        async function extractText(pdf) {
+            let fullText = '';
+            
+            // Try text extraction first
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+            
+            console.log('Extracted text length:', fullText.length);
+            
+            // If no text, try OCR
+            if (fullText.trim().length < 50) {
+                console.log('Low text content, trying OCR...');
+                updateProgress(85, 'Running OCR...');
+                fullText = await doOCR(pdf);
+            }
+            
+            // Parse the text
+            extractedData = parseText(fullText);
+            console.log('Parsed data:', extractedData);
+        }
+
+        // OCR function
+        async function doOCR(pdf) {
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 2 });
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+            
+            const worker = await Tesseract.createWorker('eng');
+            const { data: { text } } = await worker.recognize(canvas);
+            await worker.terminate();
+            
+            return text;
+        }
+
+        // Parse text for invoice data
+        function parseText(text) {
+            const data = {
                 invoiceNumber: '',
                 invoiceDate: '',
                 vendorName: '',
@@ -295,546 +411,145 @@
                 lineItems: []
             };
 
-            // DOM elements
-            const fileUpload = document.getElementById('file-upload');
-            const dropZone = document.getElementById('drop-zone');
-            const processingStatus = document.getElementById('processing-status');
-            const processingMessage = document.getElementById('processing-message');
-            const progressBar = document.getElementById('progress-bar');
-            const progressText = document.getElementById('progress-text');
-            const mainContent = document.getElementById('main-content');
-            const pdfCanvas = document.getElementById('pdf-canvas');
-            const pageInfo = document.getElementById('page-info');
-            const prevPageBtn = document.getElementById('prev-page');
-            const nextPageBtn = document.getElementById('next-page');
-            const clearProcessBtn = document.getElementById('clear-process');
-            const saveDataBtn = document.getElementById('save-data');
-            const exportCsvBtn = document.getElementById('export-csv');
-            const addLineItemBtn = document.getElementById('add-line-item');
-            const lineItemsTable = document.getElementById('line-items');
-
-            // Event listeners
-            fileUpload.addEventListener('change', handleFileUpload);
-            prevPageBtn.addEventListener('click', () => changePage(-1));
-            nextPageBtn.addEventListener('click', () => changePage(1));
-            clearProcessBtn.addEventListener('click', clearAndReset);
-            saveDataBtn.addEventListener('click', saveData);
-            exportCsvBtn.addEventListener('click', exportToCSV);
-            addLineItemBtn.addEventListener('click', addLineItem);
-
-            // Drag and drop functionality
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('drag-over');
-            });
+            const lines = text.split('\n').filter(line => line.trim());
             
-            dropZone.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drag-over');
-            });
+            // Find invoice number (your format: 561DSSBM-0002)
+            const invoiceMatch = text.match(/([0-9]{3,}[A-Z]{2,}[A-Z0-9\-]{0,})/i) ||
+                               text.match(/invoice\s*#?\s*:?\s*([A-Z0-9\-]+)/i) ||
+                               text.match(/#\s*([A-Z0-9\-]{3,})/i);
+            if (invoiceMatch) {
+                data.invoiceNumber = invoiceMatch[1];
+            }
             
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drag-over');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    handleFileSelection(files[0]);
-                }
-            });
-
-            // Progress update function
-            function updateProgress(percent, message = '') {
-                progressBar.style.width = `${percent}%`;
-                progressText.textContent = `${Math.round(percent)}% complete`;
-                if (message) {
-                    processingMessage.textContent = message;
+            // Find date
+            const dateMatch = text.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i) ||
+                            text.match(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/);
+            if (dateMatch) {
+                const date = new Date(dateMatch[1]);
+                if (!isNaN(date)) {
+                    data.invoiceDate = date.toISOString().split('T')[0];
                 }
             }
-
-            // File upload handler
-            function handleFileUpload(event) {
-                const file = event.target.files[0];
-                handleFileSelection(file);
-            }
-
-            // Handle file selection (from upload or drag-drop)
-            async function handleFileSelection(file) {
-                if (!file || file.type !== 'application/pdf') {
-                    alert('Please upload a PDF file');
-                    return;
-                }
-
-                if (file.size > 50 * 1024 * 1024) { // 50MB limit
-                    alert('File size must be less than 50MB');
-                    return;
-                }
-
-                // Show processing status
-                processingStatus.classList.remove('hidden');
-                mainContent.classList.add('hidden');
-                updateProgress(0, 'Starting local processing...');
-
-                try {
-                    updateProgress(10, 'Loading PDF document locally...');
-                    
-                    // Load PDF
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                    currentPDF = pdf;
-                    totalPages = pdf.numPages;
-                    
-                    updateProgress(30, 'Rendering PDF preview...');
-                    
-                    // Render first page
-                    await renderPage(1);
-                    
-                    updateProgress(50, 'Extracting text with local OCR...');
-                    
-                    // Extract text with OCR
-                    await extractInvoiceData(pdf);
-                    
-                    updateProgress(100, 'Local extraction complete!');
-                    
-                    // Small delay to show completion
-                    setTimeout(() => {
-                        processingStatus.classList.add('hidden');
-                        mainContent.classList.remove('hidden');
-                        updateUI();
-                    }, 500);
-                    
-                } catch (error) {
-                    console.error('Error processing PDF:', error);
-                    alert('Error processing PDF. Please try again.');
-                    processingStatus.classList.add('hidden');
-                    updateProgress(0);
+            
+            // Find vendor (first few lines, look for company names)
+            for (let i = 0; i < Math.min(5, lines.length); i++) {
+                const line = lines[i];
+                if (line.length > 3 && line.length < 50 && 
+                    !line.match(/invoice|date|total/i) &&
+                    (line.match(/inc\.|corp\.|ltd\.|llc/i) || line.match(/^[A-Z][a-z\s]+$/))) {
+                    data.vendorName = line;
+                    break;
                 }
             }
-
-            // Render PDF page
-            async function renderPage(pageNum) {
-                if (!currentPDF) return;
-                
-                const page = await currentPDF.getPage(pageNum);
-                const viewport = page.getViewport({ scale: 1.5 });
-                
-                const canvas = pdfCanvas;
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: viewport
-                };
-                
-                await page.render(renderContext).promise;
-                
-                // Update page info
-                pageInfo.textContent = `Page ${pageNum} of ${totalPages}`;
-                prevPageBtn.disabled = pageNum <= 1;
-                nextPageBtn.disabled = pageNum >= totalPages;
-                currentPage = pageNum;
+            
+            // Find total amount
+            const totalMatch = text.match(/total\s*:?\s*\$?\s*([\d,]+\.?\d*)/i) ||
+                             text.match(/amount\s*due\s*:?\s*\$?\s*([\d,]+\.?\d*)/i) ||
+                             text.match(/\$\s*([\d,]+\.?\d{2})/);
+            if (totalMatch) {
+                data.totalAmount = '$' + totalMatch[1].replace(/,/g, '');
             }
-
-            // Change page
-            function changePage(delta) {
-                const newPage = currentPage + delta;
-                if (newPage >= 1 && newPage <= totalPages) {
-                    renderPage(newPage);
-                }
-            }
-
-            // Extract invoice data with enhanced patterns
-            async function extractInvoiceData(pdf) {
-                try {
-                    updateProgress(60, 'Extracting text content locally...');
-                    
-                    // First try text extraction
-                    let fullText = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        const pageText = textContent.items.map(item => item.str).join(' ');
-                        fullText += pageText + '\n';
-                    }
-
-                    updateProgress(70, 'Analyzing text content...');
-
-                    // If text extraction yields little content, use OCR
-                    if (fullText.trim().length < 100) {
-                        console.log('Using local OCR for text extraction...');
-                        updateProgress(75, 'Performing local OCR analysis...');
-                        fullText = await performOCR(pdf);
-                    }
-
-                    updateProgress(90, 'Parsing invoice data...');
-                    
-                    // Extract data using enhanced patterns
-                    extractedData = parseInvoiceText(fullText);
-                    console.log('🎯 Extracted data:', extractedData);
-                    
-                    // Add default line items if none found
-                    if (extractedData.lineItems.length === 0) {
-                        extractedData.lineItems = [
-                            { description: '', amount: '' }
-                        ];
-                    }
-                } catch (error) {
-                    console.error('Error extracting data:', error);
-                    // Provide default structure on error
-                    extractedData = {
-                        invoiceNumber: '',
-                        invoiceDate: '',
-                        vendorName: '',
-                        totalAmount: '',
-                        lineItems: [{ description: '', amount: '' }]
-                    };
-                }
-            }
-
-            // Perform OCR on PDF using local Tesseract
-            async function performOCR(pdf) {
-                const page = await pdf.getPage(1);
-                const viewport = page.getViewport({ scale: 2 });
-                
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-                
-                // Initialize Tesseract with local worker
-                const worker = await Tesseract.createWorker('eng', 1, {
-                    workerPath: 'libs/tesseract-worker.min.js'
-                });
-                
-                try {
-                    updateProgress(85, 'Running local OCR recognition...');
-                    const { data: { text } } = await worker.recognize(canvas);
-                    return text;
-                } finally {
-                    await worker.terminate();
-                }
-            }
-
-            // Enhanced invoice parsing with patterns for your specific format
-            function parseInvoiceText(text) {
-                const data = {
-                    invoiceNumber: '',
-                    invoiceDate: '',
-                    vendorName: '',
-                    totalAmount: '',
-                    lineItems: []
-                };
-
-                // Clean text
-                const cleanText = text.replace(/\s+/g, ' ').trim();
-                const lines = text.split('\n').map(line => line.trim()).filter(line => line);
-
-                // Enhanced patterns for invoice number (including your specific format)
-                const invoicePatterns = [
-                    /([0-9]{3,}[A-Z]{2,}[A-Z0-9\-]{0,})/i,  // Pattern like 561DSSBM-0002
-                    /\b([A-Z0-9]{3,}\-[0-9]{2,})\b/i,       // Direct pattern match
-                    /invoice\s*#?\s*:?\s*([A-Z0-9\-\/]+)/i,
-                    /invoice\s*number\s*:?\s*([A-Z0-9\-\/]+)/i,
-                    /inv\s*#?\s*:?\s*([A-Z0-9\-\/]+)/i,
-                    /bill\s*#?\s*:?\s*([A-Z0-9\-\/]+)/i,
-                    /reference\s*:?\s*([A-Z0-9\-\/]+)/i,
-                    /#\s*([A-Z0-9\-\/]{3,})/i
-                ];
-
-                for (const pattern of invoicePatterns) {
-                    const match = cleanText.match(pattern);
-                    if (match && match[1]) {
-                        data.invoiceNumber = match[1].trim();
-                        console.log('🔍 Found invoice number:', data.invoiceNumber, 'using pattern:', pattern.toString());
-                        break;
-                    }
-                }
-
-                // Enhanced date patterns
-                const datePatterns = [
-                    /(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i,
-                    /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4}/i,
-                    /date\s*:?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
-                    /invoice\s*date\s*:?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
-                    /(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/,
-                    /(\d{4}-\d{2}-\d{2})/
-                ];
-
-                for (const pattern of datePatterns) {
-                    const match = cleanText.match(pattern);
-                    if (match && match[1]) {
-                        data.invoiceDate = formatDate(match[1]);
-                        console.log('🔍 Found invoice date:', data.invoiceDate);
-                        break;
-                    }
-                }
-
-                // Extract vendor name
-                if (lines.length > 0) {
-                    for (let i = 0; i < Math.min(10, lines.length); i++) {
-                        const line = lines[i];
-                        if (line.length > 3 && line.length < 100 && 
-                            !line.match(/invoice|date|bill|total|page|address|phone|email/i) && 
-                            (line.match(/inc\.|corp\.|ltd\.|llc|company/i) || 
-                             (line.match(/[A-Z]/) && line.split(' ').length <= 5))) {
-                            data.vendorName = line;
-                            console.log('🔍 Found vendor name:', data.vendorName);
-                            break;
-                        }
-                    }
-                }
-
-                // Enhanced total amount patterns
-                const totalPatterns = [
-                    /total\s*:?\s*\$?\s*([\d,]+\.?\d*)/i,
-                    /amount\s*due\s*:?\s*\$?\s*([\d,]+\.?\d*)/i,
-                    /balance\s*due\s*:?\s*\$?\s*([\d,]+\.?\d*)/i,
-                    /grand\s*total\s*:?\s*\$?\s*([\d,]+\.?\d*)/i,
-                    /total\s*amount\s*:?\s*\$?\s*([\d,]+\.?\d*)/i,
-                    /\$\s*([\d,]+\.?\d{2})\s*$/m
-                ];
-
-                for (const pattern of totalPatterns) {
-                    const match = cleanText.match(pattern);
-                    if (match && match[1]) {
-                        data.totalAmount = '$' + match[1].replace(/,/g, '');
-                        console.log('🔍 Found total amount:', data.totalAmount);
-                        break;
-                    }
-                }
-
-                // Extract line items
-                const amountPattern = /\$?\s*([\d,]+\.?\d{2})/;
-                const processedLines = new Set();
-                
-                for (let i = 0; i < lines.length && data.lineItems.length < 10; i++) {
-                    const line = lines[i];
-                    if (processedLines.has(i)) continue;
-                    
-                    // Skip header/footer lines
-                    if (line.match(/invoice|date|bill|total|page|address|phone|email/i)) continue;
-                    
-                    const amountMatch = line.match(amountPattern);
-                    if (amountMatch && line.length > 10) {
-                        const amount = '$' + amountMatch[1].replace(/,/g, '');
-                        const description = line.replace(amountPattern, '').trim();
-                        
-                        if (description && !description.match(/^[\d\s,.$]+$/)) {
-                            data.lineItems.push({ description, amount });
-                            processedLines.add(i);
-                            console.log('🔍 Found line item:', { description, amount });
-                        }
-                    }
-                }
-
-                return data;
-            }
-
-            // Format date to YYYY-MM-DD
-            function formatDate(dateStr) {
-                try {
-                    // Handle text dates first
-                    if (dateStr.match(/[a-zA-Z]/)) {
-                        const date = new Date(dateStr);
-                        if (!isNaN(date.getTime())) {
-                            return date.toISOString().split('T')[0];
-                        }
-                    }
-                    
-                    const cleaned = dateStr.replace(/[^\d-\/]/g, '');
-                    const parts = cleaned.split(/[-\/]/);
-                    
-                    if (parts.length !== 3) return '';
-                    
-                    let year, month, day;
-                    
-                    // Handle different date formats
-                    if (parts[0].length === 4) {
-                        [year, month, day] = parts;
-                    } else if (parts[2].length === 4) {
-                        year = parts[2];
-                        if (parseInt(parts[0]) > 12) {
-                            day = parts[0];
-                            month = parts[1];
-                        } else {
-                            month = parts[0];
-                            day = parts[1];
-                        }
-                    } else {
-                        month = parts[0];
-                        day = parts[1];
-                        year = '20' + parts[2];
-                    }
-                    
-                    // Ensure 2-digit format
-                    month = month.padStart(2, '0');
-                    day = day.padStart(2, '0');
-                    
-                    return `${year}-${month}-${day}`;
-                } catch (error) {
-                    console.error('Date formatting error:', error);
-                    return '';
-                }
-            }
-
-            // Update UI with extracted data
-            function updateUI() {
-                document.getElementById('invoice-number').value = extractedData.invoiceNumber || '';
-                document.getElementById('invoice-date').value = extractedData.invoiceDate || '';
-                document.getElementById('vendor-name').value = extractedData.vendorName || '';
-                document.getElementById('total-amount').value = extractedData.totalAmount || '';
-                
-                // Clear and populate line items
-                lineItemsTable.innerHTML = '';
-                extractedData.lineItems.forEach((item, index) => {
-                    addLineItemRow(item.description, item.amount, index);
-                });
-                
-                console.log('✅ UI updated with locally extracted data:', extractedData);
-            }
-
-            // Add line item row
-            function addLineItemRow(description = '', amount = '', index = null) {
-                const row = document.createElement('tr');
-                const itemIndex = index !== null ? index : extractedData.lineItems.length;
-                
-                row.innerHTML = `
-                    <td class="px-4 py-2">
-                        <input type="text" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-transparent" 
-                               placeholder="Item description" value="${description}" data-index="${itemIndex}" data-field="description">
-                    </td>
-                    <td class="px-4 py-2">
-                        <input type="text" class="w-full px-2 py-1 border border-gray-300 rounded text-right focus:ring-1 focus:ring-purple-500 focus:border-transparent" 
-                               placeholder="$0.00" value="${amount}" data-index="${itemIndex}" data-field="amount">
-                    </td>
-                    <td class="px-4 py-2 text-center">
-                        <button class="text-red-600 hover:text-red-800" onclick="removeLineItem(${itemIndex})">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </td>
-                `;
-                
-                lineItemsTable.appendChild(row);
-                
-                // Add event listeners for updates
-                row.querySelectorAll('input').forEach(input => {
-                    input.addEventListener('change', updateLineItemData);
-                });
-            }
-
-            // Add new line item
-            function addLineItem() {
-                const newItem = { description: '', amount: '' };
-                extractedData.lineItems.push(newItem);
-                addLineItemRow('', '', extractedData.lineItems.length - 1);
-            }
-
-            // Remove line item
-            window.removeLineItem = function(index) {
-                extractedData.lineItems.splice(index, 1);
-                updateUI();
-            }
-
-            // Update line item data
-            function updateLineItemData(event) {
-                const index = parseInt(event.target.dataset.index);
-                const field = event.target.dataset.field;
-                if (extractedData.lineItems[index]) {
-                    extractedData.lineItems[index][field] = event.target.value;
-                }
-            }
-
-            // Save data locally
-            function saveData() {
-                // Update main fields
-                extractedData.invoiceNumber = document.getElementById('invoice-number').value;
-                extractedData.invoiceDate = document.getElementById('invoice-date').value;
-                extractedData.vendorName = document.getElementById('vendor-name').value;
-                extractedData.totalAmount = document.getElementById('total-amount').value;
-                
-                console.log('💾 Saved data locally:', extractedData);
-                alert('Invoice data saved successfully!');
-            }
-
-            // Export to CSV
-            function exportToCSV() {
-                let csv = 'Invoice Number,Invoice Date,Vendor Name,Total Amount\n';
-                csv += `"${extractedData.invoiceNumber}","${extractedData.invoiceDate}","${extractedData.vendorName}","${extractedData.totalAmount}"\n\n`;
-                csv += 'Description,Amount\n';
-                
-                extractedData.lineItems.forEach(item => {
-                    csv += `"${item.description}","${item.amount}"\n`;
-                });
-                
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.setAttribute('hidden', '');
-                a.setAttribute('href', url);
-                a.setAttribute('download', `invoice_${extractedData.invoiceNumber || Date.now()}.csv`);
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                console.log('📊 CSV exported successfully');
-            }
-
-            // Clear and reset
-            function clearAndReset() {
-                currentPDF = null;
-                currentPage = 1;
-                totalPages = 0;
-                extractedData = {
-                    invoiceNumber: '',
-                    invoiceDate: '',
-                    vendorName: '',
-                    totalAmount: '',
-                    lineItems: []
-                };
-                
-                mainContent.classList.add('hidden');
-                fileUpload.value = '';
-                updateProgress(0);
-                
-                // Clear canvas
-                const context = pdfCanvas.getContext('2d');
-                context.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
-                
-                console.log('🔄 Application reset');
-            }
-
-            console.log('✅ Offline Invoice Extraction Tool fully initialized!');
+            
+            // Add a default line item
+            data.lineItems = [{ description: '', amount: '' }];
+            
+            return data;
         }
 
-        // Wait for local libraries to load and then initialize
-        let loadCheckCount = 0;
-        function checkLibrariesLoaded() {
-            loadCheckCount++;
-            if (typeof pdfjsLib !== 'undefined' && typeof Tesseract !== 'undefined') {
-                initializeApp();
-            } else if (loadCheckCount < 30) { // Max 3 seconds wait
-                setTimeout(checkLibrariesLoaded, 100);
-            } else {
-                console.error('❌ Local libraries failed to load');
-                document.getElementById('loading-message').innerHTML = `
-                    <div class="text-red-600">
-                        <h3 class="font-semibold">Error Loading Local Libraries</h3>
-                        <p class="text-sm">Please restart the application.</p>
-                    </div>
-                `;
-            }
+        // Update UI with extracted data
+        function updateUI() {
+            document.getElementById('invoice-number').value = extractedData.invoiceNumber || '';
+            document.getElementById('invoice-date').value = extractedData.invoiceDate || '';
+            document.getElementById('vendor-name').value = extractedData.vendorName || '';
+            document.getElementById('total-amount').value = extractedData.totalAmount || '';
+            
+            // Add line items
+            lineItemsTable.innerHTML = '';
+            extractedData.lineItems.forEach((item, index) => {
+                addLineItemRow(item.description, item.amount, index);
+            });
         }
 
-        // Start loading check
-        checkLibrariesLoaded();
+        // Add line item row
+        function addLineItemRow(description = '', amount = '', index = null) {
+            const row = document.createElement('tr');
+            const itemIndex = index !== null ? index : extractedData.lineItems.length;
+            
+            row.innerHTML = `
+                <td class="px-4 py-2">
+                    <input type="text" class="w-full px-2 py-1 border border-gray-300 rounded" 
+                           placeholder="Item description" value="${description}">
+                </td>
+                <td class="px-4 py-2">
+                    <input type="text" class="w-full px-2 py-1 border border-gray-300 rounded text-right" 
+                           placeholder="$0.00" value="${amount}">
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <button class="text-red-600 hover:text-red-800" onclick="this.closest('tr').remove()">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </td>
+            `;
+            
+            lineItemsTable.appendChild(row);
+        }
+
+        // Page navigation
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) renderPage(currentPage - 1);
+        });
+
+        nextPageBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) renderPage(currentPage + 1);
+        });
+
+        // Add line item
+        addLineItemBtn.addEventListener('click', () => {
+            addLineItemRow();
+        });
+
+        // Save data
+        saveDataBtn.addEventListener('click', () => {
+            console.log('Saving data...');
+            alert('Invoice data saved!');
+        });
+
+        // Export CSV
+        exportCsvBtn.addEventListener('click', () => {
+            const csv = `Invoice Number,Date,Vendor,Amount\n"${extractedData.invoiceNumber}","${extractedData.invoiceDate}","${extractedData.vendorName}","${extractedData.totalAmount}"`;
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'invoice.csv';
+            a.click();
+        });
+
+        // Clear and reset
+        clearProcessBtn.addEventListener('click', () => {
+            currentPDF = null;
+            currentPage = 1;
+            totalPages = 0;
+            extractedData = { invoiceNumber: '', invoiceDate: '', vendorName: '', totalAmount: '', lineItems: [] };
+            
+            mainContent.classList.add('hidden');
+            fileUpload.value = '';
+            
+            const context = pdfCanvas.getContext('2d');
+            context.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
+        });
+
+        // Final status check
+        console.log('🎯 Checking if all elements found:');
+        console.log('- fileUpload:', fileUpload ? '✅' : '❌');
+        console.log('- dropZone:', dropZone ? '✅' : '❌');
+        console.log('- processingStatus:', processingStatus ? '✅' : '❌');
+        console.log('- mainContent:', mainContent ? '✅' : '❌');
+        console.log('- pdfCanvas:', pdfCanvas ? '✅' : '❌');
+        
+        console.log('🚀 Invoice Extraction Tool ready!');
     </script>
 </body>
 </html>
